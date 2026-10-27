@@ -48,13 +48,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             clean build
 
-      - name: Package KeyboardXApp.app into zip for Appetize.io
+      - name: Stage KeyboardXApp.app for Artifact
         run: |
-          cd build/Build/Products/Release-iphonesimulator
-          zip -r "$GITHUB_WORKSPACE/KeyboardXApp-Simulator.zip" KeyboardXApp.app
+          mkdir -p artifact_staging
+          cp -R build/Build/Products/Release-iphonesimulator/KeyboardXApp.app artifact_staging/
 
-      - name: Upload Simulator App Artifact
+      - name: Upload Simulator App Artifact (Ready for Appetize.io)
         uses: actions/upload-artifact@v4
         with:
           name: KeyboardXApp-Simulator
-          path: KeyboardXApp-Simulator.zip
+          path: artifact_staging/
