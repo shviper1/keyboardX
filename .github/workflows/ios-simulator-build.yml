@@ -7,15 +7,28 @@ on:
 
 jobs:
   build-simulator:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          if [ -d "/Applications/Xcode_16.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          fi
+          xcodebuild -version
 
       - name: Generate Xcode project with XcodeGen
         run: |
           brew install xcodegen
           xcodegen generate
+          # Ensure compatibility with both Xcode 15 and Xcode 16
+          sed -i '' 's/objectVersion = 77;/objectVersion = 56;/g' KeyboardX.xcodeproj/project.pbxproj
 
       - name: Run Logic Tests
         run: ./scripts/verify.sh
