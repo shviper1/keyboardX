@@ -1,0 +1,47 @@
+name: Build iOS Simulator App
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-simulator:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Xcode project with XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Run Logic Tests
+        run: ./scripts/verify.sh
+
+      - name: Build for iOS Simulator (unsigned)
+        run: |
+          xcodebuild \
+            -project KeyboardX.xcodeproj \
+            -scheme KeyboardXApp \
+            -sdk iphonesimulator \
+            -configuration Release \
+            -derivedDataPath build \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Package KeyboardXApp.app into zip for Appetize.io
+        run: |
+          cd build/Build/Products/Release-iphonesimulator
+          zip -r "$GITHUB_WORKSPACE/KeyboardXApp-Simulator.zip" KeyboardXApp.app
+
+      - name: Upload Simulator App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeyboardXApp-Simulator
+          path: KeyboardXApp-Simulator.zip

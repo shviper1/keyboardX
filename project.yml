@@ -1,0 +1,59 @@
+name: KeyboardX
+options:
+  bundleIdPrefix: com.yourname
+  deploymentTarget:
+    iOS: "15.0"
+  xcodeVersion: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"
+    DEVELOPMENT_TEAM: ""
+targets:
+  KeyboardXApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: KeyboardXApp
+      - path: Shared
+    info:
+      path: KeyboardXApp/Info.plist
+    entitlements:
+      path: KeyboardXApp/KeyboardXApp.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.yourname.keyboardX
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.keyboardX
+    dependencies:
+      - target: KeyboardExtension
+        embed: true
+
+  KeyboardExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: KeyboardExtension
+      - path: Shared
+    info:
+      path: KeyboardExtension/Info.plist
+    entitlements:
+      path: KeyboardExtension/KeyboardExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.yourname.keyboardX
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.keyboardX.KeyboardExtension
+
+  KeyboardXTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: KeyboardXTests
+      - path: KeyboardExtension/Layout/KeyboardLayout.swift
+      - path: KeyboardExtension/Input/KeyboardState.swift
+      - path: KeyboardExtension/Input/TextContext.swift
+    dependencies:
+      - target: KeyboardXApp
