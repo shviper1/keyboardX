@@ -7,33 +7,22 @@ on:
 
 jobs:
   build-simulator:
-    runs-on: macos-15
+    runs-on: macos-14
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Select latest Xcode
-        run: |
-          if [ -d "/Applications/Xcode_16.2.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.1.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.0.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
-          fi
-          xcodebuild -version
 
       - name: Generate Xcode project with XcodeGen
         run: |
           brew install xcodegen
           xcodegen generate
-          # Ensure compatibility with both Xcode 15 and Xcode 16
+          # Downgrade pbxproj objectVersion so Xcode 15.4 can open it
           sed -i '' 's/objectVersion = 77;/objectVersion = 56;/g' KeyboardX.xcodeproj/project.pbxproj
 
       - name: Run Logic Tests
         run: ./scripts/verify.sh
 
-      - name: Build for iOS Simulator (unsigned)
+      - name: Build for iOS Simulator (Ad-Hoc Signed for Appetize.io)
         run: |
           xcodebuild \
             -project KeyboardX.xcodeproj \
@@ -43,18 +32,29 @@ jobs:
             -derivedDataPath build \
             ARCHS="arm64 x86_64" \
             ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY="-" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
             clean build
 
-      - name: Stage KeyboardXApp.app for Artifact
+      - name: Re-sign App and Extension for Simulator installd
         run: |
-          mkdir -p artifact_staging
-          cp -R build/Build/Products/Release-iphonesimulator/KeyboardXApp.app artifact_staging/
+          APP_PATH="build/Build/Products/Release-iphonesimulator/KeyboardXApp.app"
+          chmod +x "$APP_PATH/KeyboardXApp"
+          if [ -d "$APP_PATH/PlugIns/KeyboardExtension.appex" ]; then
+            chmod +x "$APP_PATH/PlugIns/KeyboardExtension.appex/KeyboardExtension"
+            codesign --force --sign - --timestamp=none "$APP_PATH/PlugIns/KeyboardExtension.appex"
+          fi
+          codesign --force --sign - --timestamp=none "$APP_PATH"
 
-      - name: Upload Simulator App Artifact (Ready for Appetize.io)
+      - name: Package KeyboardXApp.app into zip
+        run: |
+          cd build/Build/Products/Release-iphonesimulator
+          zip -ry "$GITHUB_WORKSPACE/KeyboardXApp-Simulator.zip" KeyboardXApp.app
+
+      - name: Upload Simulator App Artifact
         uses: actions/upload-artifact@v4
         with:
           name: KeyboardXApp-Simulator
-          path: artifact_staging/
+          path: KeyboardXApp-Simulator.zip
